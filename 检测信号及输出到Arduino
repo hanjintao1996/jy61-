@@ -1,0 +1,219 @@
+
+import serial
+import time
+import easygui
+ 
+ACCData=[0.0]*8
+GYROData=[0.0]*8
+AngleData=[0.0]*8
+ 
+FrameState = 0
+Bytenum = 0
+CheckSum = 0
+ 
+shakedegree = 0
+ 
+def DueData(inputdata):
+    global  FrameState
+    global  Bytenum
+    global  CheckSum
+    for data in inputdata:
+        if FrameState==0:
+            if data==0x55 and Bytenum==0:
+                CheckSum=data
+                Bytenum=1
+                continue
+            elif data==0x51 and Bytenum==1:
+                CheckSum+=data
+                FrameState=1
+                Bytenum=2
+            elif data==0x52 and Bytenum==1:
+                CheckSum+=data
+                FrameState=2
+                Bytenum=2
+            elif data==0x53 and Bytenum==1:
+                CheckSum+=data
+                FrameState=3
+                Bytenum=2
+        elif FrameState==1: # acc
+            if Bytenum<10:
+                ACCData[Bytenum-2]=data
+                CheckSum+=data
+                Bytenum+=1
+            else:
+                if data == (CheckSum&0xff):
+                    #print(get_acc(ACCData))
+                    accvalue = get_acc(ACCData)
+                    return accvalue 
+                CheckSum=0
+                Bytenum=0
+                FrameState=0
+        elif FrameState==2: # gyro
+            if Bytenum<10:
+                GYROData[Bytenum-2]=data
+                CheckSum+=data
+                Bytenum+=1
+            else:
+                if data == (CheckSum&0xff):
+                    pass
+                    #print(get_gyro(GYROData))
+                CheckSum=0
+                Bytenum=0
+                FrameState=0
+        elif FrameState==3: # angle
+            if Bytenum<10:
+                AngleData[Bytenum-2]=data
+                CheckSum+=data
+                Bytenum+=1
+            else:
+                if data == (CheckSum&0xff):
+                    pass#print(get_angle(AngleData))
+                CheckSum=0
+                Bytenum=0
+                FrameState=0
+ 
+ 
+def get_acc(datahex):  #加速度
+    axl = datahex[0]                                        
+    axh = datahex[1]
+    ayl = datahex[2]                                        
+    ayh = datahex[3]
+    azl = datahex[4]                                        
+    azh = datahex[5]
+    
+    k_acc = 16
+ 
+    acc_x = (axh << 8 | axl) / 32768 * k_acc
+    acc_y = (ayh << 8 | ayl) / 32768 * k_acc
+    acc_z = (azh << 8 | azl) / 32768 * k_acc
+    if acc_x >= k_acc:
+        acc_x -= 2 * k_acc
+    if acc_y >= k_acc:
+        acc_y -= 2 * k_acc
+    if acc_z >= k_acc:
+        acc_z-= 2 * k_acc
+    
+    acc = [acc_x,acc_y,acc_z]
+    return acc
+ 
+ 
+def get_gyro(datahex):                                          #陀螺仪
+    wxl = datahex[0]                                        
+    wxh = datahex[1]
+    wyl = datahex[2]                                        
+    wyh = datahex[3]
+    wzl = datahex[4]                                        
+    wzh = datahex[5]
+    k_gyro = 2000
+ 
+    gyro_x = (wxh << 8 | wxl) / 32768 * k_gyro
+    gyro_y = (wyh << 8 | wyl) / 32768 * k_gyro
+    gyro_z = (wzh << 8 | wzl) / 32768 * k_gyro
+    if gyro_x >= k_gyro:
+        gyro_x -= 2 * k_gyro
+    if gyro_y >= k_gyro:
+        gyro_y -= 2 * k_gyro
+    if gyro_z >=k_gyro:
+        gyro_z-= 2 * k_gyro
+    return gyro_x,gyro_y,gyro_z
+ 
+ 
+def get_angle(datahex):                                 #角度
+    rxl = datahex[0]                                        
+    rxh = datahex[1]
+    ryl = datahex[2]                                        
+    ryh = datahex[3]
+    rzl = datahex[4]                                        
+    rzh = datahex[5]
+    k_angle = 180
+ 
+    angle_x = (rxh << 8 | rxl) / 32768 * k_angle
+    angle_y = (ryh << 8 | ryl) / 32768 * k_angle
+    angle_z = (rzh << 8 | rzl) / 32768 * k_angle
+    if angle_x >= k_angle:
+        angle_x -= 2 * k_angle
+    if angle_y >= k_angle:
+        angle_y -= 2 * k_angle
+    if angle_z >=k_angle:
+        angle_z-= 2 * k_angle
+ 
+    return angle_x,angle_y,angle_z
+ 
+def shakecharge(self):                #震颤判断函数
+    ifshake = 0           #震颤次数
+    ifshake_0 =0          #是否归零
+    limit_a1 = 0.5
+    limit_a2 = 0.8
+    limit_a3 = 1.2        #震动分级
+    interval_a = 5        #更新间隔
+    acc_fre[0] = acc_fre[0] + 1 #重要！不能用变量，要用list
+    global shakedegree
+    shakedegree= shakedegree - 0.1    #十次平稳后切断
+    print(acc_fre[0])
+    if acc_fre[0] % interval_a == 0:  #采样
+        acc_old[0] = acc[0]
+        acc_old[1] = acc[1]
+        acc_old[2] = acc[2]
+    if acc_fre[0] % (interval_a * 10) == 0: #重置
+        if ifshake == ifshake_0:           #如果没更新
+            ifshake = ifshake_0 = 0
+            print('——————重置！')
+        else:                              #更新归零阈值
+            ifshake_0 = ifshake
+            print('******更新! ')
+    else:
+        pass
+ 
+    if acc_fre[0] > interval_a*2 and (abs(acc[0] - acc_old[0]) > limit_a3 or acc[1] - acc_old[1] > limit_a3 or acc[2] - acc_old[2] > limit_a3) :
+        print("===重度震颤!!!!!")   #LED灯亮
+        shakedegree = 1
+        #time.sleep(1)
+        demo = b"1"
+        ser1.write(demo)
+        s = ser1.read(1)
+        print(s)
+    elif acc_fre[0] > interval_a*2 and (abs(acc[0] - acc_old[0]) > limit_a2 or acc[1] - acc_old[1] > limit_a2 or acc[2] - acc_old[2] > limit_a2):
+        print("===中度震颤!!!!!")
+        shakedegree = 1
+        demo2 = b"1"
+        ser1.write(demo2)
+        #time.sleep(1)
+        s = ser1.read(1)
+        print(s)
+        ifshake = 0
+ 
+    elif acc_fre[0] > interval_a*2 and (abs(acc[0] - acc_old[0]) > limit_a1 or acc[1] - acc_old[1] > limit_a1 or acc[2] - acc_old[2] > limit_a1):
+        print("===轻度震颤!!!!!")
+        shakedegree = 1
+        demo3 = b"1"
+        ser1.write(demo3)
+        #time.sleep(1)
+        s = ser1.read(1)
+        print(s)
+        ifshake = 0
+    else:
+        shakedegree = shakedegree - 0.5
+        print(shakedegree)
+        if shakedegree < 0:
+            demo4 = b"2"
+            ser1.write(demo4)
+ 
+if __name__=='__main__':
+    ser1 = serial.Serial("com9", 9600)  # 打开Arduino端口
+    #ser = serial.Serial("com8", 115200)  # 打开端口，改到循环外，避免一直开闭串口
+    print(ser1.is_open)
+    demo3 = b"1"
+    ser1.write(demo3)
+    acc_old = [0,0,0]
+    acc_fre = [1]
+    
+    while(1):
+        ser = serial.Serial("com8", 115200)  # 打开端口，放在循环内，可以避免连接不畅导致掉线
+        datahex = ser.read(33)
+        acc = DueData(datahex)
+        if acc:
+            print(acc)
+            shakecharge(acc)
+        #print(acc_fre)
+        ser.close()
+        time.sleep(0.2)
