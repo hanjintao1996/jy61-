@@ -1,0 +1,37 @@
+#define IOBEGIN 22 
+#define IOEND 53               //定义初始化的IO口
+// the setup function runs once when you press reset or power the board
+void setup() {
+    Serial.begin(9600);         //初始化端口
+    Serial.print("Ready");
+    for(int i=IOBEGIN;i<=IOEND;i++)
+    {  
+        
+        pinMode(i,OUTPUT);
+    } 
+}
+ 
+// the loop function runs over and over again forever
+void loop() {
+  if(Serial.available()){
+   char ch = Serial.read();        //读取串口
+   Serial.print(ch);
+   switch(ch){                     //根据传入信息判断工作模式
+   case'1':
+   digitalWrite(22,HIGH);
+   digitalWrite(23,HIGH);
+   digitalWrite(24,HIGH);
+   digitalWrite(25,HIGH);
+   digitalWrite(26,HIGH);
+   digitalWrite(27,HIGH);
+   break;
+   case'2':
+   digitalWrite(22,LOW);
+   digitalWrite(23,LOW);
+   digitalWrite(24,LOW);
+   digitalWrite(25,LOW);
+   digitalWrite(26,LOW);
+   digitalWrite(27,LOW);
+   break;
+}}}
+ 
