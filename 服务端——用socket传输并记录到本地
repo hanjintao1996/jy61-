@@ -40,7 +40,7 @@ def message_handle(client):
     消息处理
     """
     client.sendall("连接服务器成功!".encode(encoding='utf8'))
-    Time = time.strftime("%Y-%m-%d")  # 记录当前时间
+    Time = time.strftime("%Y-%m-%d") + '设备'+str(g_conn_pool.index(client)) # 记录当前时间
     file_write_obj = open(Time + ".txt", 'w')  # 建立记录文件
     file_write_obj.writelines("=================================================")
     file_write_obj.write('\n')
@@ -49,18 +49,19 @@ def message_handle(client):
     file_write_obj.writelines("===============================================")
     file_write_obj.write('\n')
     while True:
+        #bytes = ''
         bytes = client.recv(1024)
-        print("客户端消息:", bytes.decode(encoding='utf8'))
+       # print("客户端消息:", bytes.decode(encoding='utf8'))
         file_write_obj.writelines(str(bytes.decode(encoding='utf8')))
         file_write_obj.write('\n')
-        bytes = '1'
         if len(bytes) == 0:
             client.close()
             # 删除连接
             g_conn_pool.remove(client)
             print("有一个客户端下线了。")
-            break
             file_write_obj.close()
+            break
+            
 
 if __name__ == '__main__':  # 主函数
     init()
