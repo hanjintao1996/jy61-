@@ -1,4 +1,4 @@
-mport socket  # 导入 socket 模块
+import socket  # 导入 socket 模块
 import serial
 
 ACCData = [0.0] * 8
